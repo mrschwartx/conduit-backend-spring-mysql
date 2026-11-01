@@ -5,6 +5,7 @@ import com.conduit.backend.articles.domain.ArticleRepository;
 import com.conduit.backend.shared.domain.AlreadyExistsException;
 import com.conduit.backend.shared.domain.EntityIds;
 import com.conduit.backend.shared.infrastructure.persistence.UniqueViolations;
+import com.conduit.backend.shared.infrastructure.persistence.UuidColumns;
 import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Optional;
@@ -14,8 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class JpaArticleRepository implements ArticleRepository {
-
-	private static final UUID NO_EXCLUSION = new UUID(0L, 0L);
 
 	private final ArticleJpaRepository jpaRepository;
 
@@ -55,7 +54,7 @@ public class JpaArticleRepository implements ArticleRepository {
 			entity.apply(article);
 			entityManager.flush();
 			entityManager.createNativeQuery("delete from article_tags where article_id = :id")
-					.setParameter("id", article.getId())
+					.setParameter("id", UuidColumns.text(article.getId()))
 					.executeUpdate();
 			insertTags(article.getId(), article.getTags().values());
 			return true;
@@ -73,7 +72,7 @@ public class JpaArticleRepository implements ArticleRepository {
 
 	@Override
 	public boolean existsBySlug(String slug, UUID excludeId) {
-		return jpaRepository.countBySlugAndIdNot(slug, excludeId != null ? excludeId : NO_EXCLUSION) > 0;
+		return jpaRepository.countBySlugAndIdNot(slug, excludeId != null ? excludeId : UuidColumns.NIL) > 0;
 	}
 
 	@Override
@@ -85,8 +84,8 @@ public class JpaArticleRepository implements ArticleRepository {
 	private void insertTags(UUID articleId, List<String> tags) {
 		for (int position = 0; position < tags.size(); position++) {
 			entityManager.createNativeQuery(
-					"insert into article_tags (article_id, tag, position) values (:id, :tag, :position)")
-					.setParameter("id", articleId)
+					"insert into article_tags (article_id, tag, `position`) values (:id, :tag, :position)")
+					.setParameter("id", UuidColumns.text(articleId))
 					.setParameter("tag", tags.get(position))
 					.setParameter("position", position)
 					.executeUpdate();
@@ -95,8 +94,8 @@ public class JpaArticleRepository implements ArticleRepository {
 
 	private List<String> tagsOf(UUID articleId) {
 		List<?> rows = entityManager
-				.createNativeQuery("select tag from article_tags where article_id = :id order by position")
-				.setParameter("id", articleId)
+				.createNativeQuery("select tag from article_tags where article_id = :id order by `position`")
+				.setParameter("id", UuidColumns.text(articleId))
 				.getResultList();
 		return rows.stream().map(String.class::cast).toList();
 	}

@@ -1,8 +1,8 @@
 # Conduit Backend (Spring Boot)
 
-A RealWorld ("Conduit") backend: register and log in, edit your profile, follow authors, publish articles with tags, favorite articles and comment on them. It is a REST API built with Spring Boot 4 and PostgreSQL, organised as a modular monolith with Domain-Driven Design and Clean Architecture. The HTTP contract is defined by [`conduit-openapi/openapi.yml`](conduit-openapi/openapi.yml).
+A RealWorld ("Conduit") backend: register and log in, edit your profile, follow authors, publish articles with tags, favorite articles and comment on them. It is a REST API built with Spring Boot 4 and MySQL, organised as a modular monolith with Domain-Driven Design and Clean Architecture. The HTTP contract is defined by [`conduit-openapi/openapi.yml`](conduit-openapi/openapi.yml).
 
-**Stack:** Java 25 · Spring Boot 4 · Spring Web MVC · Spring Security · Spring Data JPA · PostgreSQL 18 · Flyway · JWT (jjwt) · bcrypt · JUnit 5 · Docker · GitHub Actions
+**Stack:** Java 25 · Spring Boot 4 · Spring Web MVC · Spring Security · Spring Data JPA · MySQL 8.4 · Flyway · JWT (jjwt) · bcrypt · JUnit 5 · Docker · GitHub Actions
 
 ## Quick start
 
@@ -17,7 +17,7 @@ openssl rand -base64 32
 ./mvnw spring-boot:run
 ```
 
-Paste the generated value into `AUTH_SECRET` in `.env`. The API runs at http://localhost:8080/api/v1 and pgAdmin at http://localhost:8081 (login `admin@conduit.dev` / `admin`, server host `conduit-postgres`, user `dev_user`, password `dev_pass`). Flyway migrations run on startup.
+Paste the generated value into `AUTH_SECRET` in `.env`. The API runs at http://localhost:8080/api/v1 and phpMyAdmin at http://localhost:8081 (server `conduit-mysql`, user `dev_user`, password `dev_pass`, or `root` / `root_pass`). Flyway migrations run on startup.
 
 | Goal            | Command                                                                                                  |
 | --------------- | -------------------------------------------------------------------------------------------------------- |
@@ -36,9 +36,9 @@ Demo login after seeding: `johndoe123@mail.com` / `password123`.
 | `APP_NAME`              | `conduit-api`           | Application name                                |
 | `APP_HOST` / `APP_PORT` | `0.0.0.0` / `8080`      | Bind address and port                           |
 | `APP_LEVEL`             | `development`           | `production` blocks seeding unless allowed      |
-| `DATABASE_URL`          | required                | JDBC URL, e.g. `jdbc:postgresql://localhost:5432/conduit_dev` |
-| `DATABASE_USER`         | required                | PostgreSQL user                                 |
-| `DATABASE_PASSWORD`     | required                | PostgreSQL password                             |
+| `DATABASE_URL`          | required                | JDBC URL, e.g. `jdbc:mysql://localhost:3306/conduit_dev?connectionTimeZone=UTC` |
+| `DATABASE_USER`         | required                | MySQL user                                      |
+| `DATABASE_PASSWORD`     | required                | MySQL password                                  |
 | `DATABASE_POOL_MAX`     | `10`                    | Maximum pool size                               |
 | `DATABASE_TIMEOUT`      | `30000`                 | Connection timeout in ms                        |
 | `AUTH_SECRET`           | required                | JWT secret, at least 32 characters              |
@@ -48,7 +48,7 @@ Demo login after seeding: `johndoe123@mail.com` / `password123`.
 | `LOG_FILE`              | `logs/conduit-api.log`  | Log file, empty for console only                |
 | `SEED_ALLOW_PRODUCTION` | `false`                 | Allows seeding when `APP_LEVEL` is `production` |
 
-Docker only (`conduit-docker/.env`): `PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `AUTH_SECRET`, `CLIENT_URL`, `LOG_LEVEL`.
+Docker only (`conduit-docker/.env`): `PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`, `AUTH_SECRET`, `CLIENT_URL`, `LOG_LEVEL`.
 
 The React frontend (`conduit-frontend-react`) talks to `http://localhost:8080/api/v1` through its Vite or nginx `/api` proxy, so no CORS setup is needed; `CLIENT_URL` only matters for direct cross-origin calls.
 
@@ -75,12 +75,12 @@ Flyway migrations live in `src/main/resources/db/migration`.
 
 | Table          | Notes                                                                        |
 | -------------- | ---------------------------------------------------------------------------- |
-| `users`        | UUID `id`, case-insensitive unique `email` and `username`, nullable `bio` and `image` |
-| `follows`      | `(follower_id, followee_id)` primary key, self-follow blocked by `CHECK`     |
-| `articles`     | UUID `id`, unique `slug`, `author_id` with `ON DELETE CASCADE`               |
+| `users`        | `CHAR(36)` UUID `id`, case-insensitive unique `email` and `username` through functional indexes, nullable `bio` and `image` |
+| `follows`      | `(follower_id, followee_id)` primary key, self-follow rejected by the `FollowUser` use case |
+| `articles`     | `CHAR(36)` UUID `id`, unique `slug`, `MEDIUMTEXT` body, `author_id` with `ON DELETE CASCADE` |
 | `article_tags` | `(article_id, tag)` primary key                                              |
 | `favorites`    | `(user_id, article_id)` primary key                                          |
-| `comments`     | identity `id`, cascades with its article and author                          |
+| `comments`     | `AUTO_INCREMENT` `id`, cascades with its article and author                  |
 
 ## API
 
@@ -137,10 +137,10 @@ Protected endpoints check authentication (401), then existence (404), ownership 
 | Layer       | Command         | What it proves                                          |
 | ----------- | --------------- | ------------------------------------------------------- |
 | Unit        | `./mvnw test`   | Domain, use cases, JWT and bcrypt without I/O           |
-| Integration | `./mvnw verify` | Full HTTP flows on a real PostgreSQL (`*IT` classes)    |
+| Integration | `./mvnw verify` | Full HTTP flows on a real MySQL (`*IT` classes)         |
 
-Integration tests read `TEST_DATABASE_URL` (default: the development database), create a temporary database, run the migrations and drop it on exit.
+Integration tests read `TEST_DATABASE_URL` (default `mysql://root:root_pass@localhost:3306/mysql`, the root account of the development container), create a temporary database, run the migrations and drop it on exit. The account must be allowed to run `CREATE DATABASE`.
 
 ## CI
 
-`.github/workflows/ci.yml` builds with JDK 25, runs unit and integration tests against PostgreSQL 18, then builds the Docker image, checks `/health`, registers a user through `POST /api/v1/users` and runs the seed.
+`.github/workflows/ci.yml` builds with JDK 25, runs unit and integration tests against MySQL 8.4, then builds the Docker image, checks `/health`, registers a user through `POST /api/v1/users` and runs the seed.

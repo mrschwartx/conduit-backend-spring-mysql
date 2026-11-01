@@ -29,12 +29,12 @@ public class AuthorProfiles {
 		Set<UUID> followed = viewerId == null ? Set.of() : followed(authorIds, viewerId);
 		List<?> rows = entityManager
 				.createNativeQuery("select id, username, bio, image from users where id in (:ids)")
-				.setParameter("ids", authorIds)
+				.setParameter("ids", UuidColumns.texts(authorIds))
 				.getResultList();
 		Map<UUID, Profile> profiles = new HashMap<>();
 		for (Object row : rows) {
 			Object[] columns = (Object[]) row;
-			UUID id = (UUID) columns[0];
+			UUID id = UuidColumns.read(columns[0]);
 			profiles.put(id, new Profile((String) columns[1], (String) columns[2], (String) columns[3],
 					followed.contains(id)));
 		}
@@ -44,13 +44,9 @@ public class AuthorProfiles {
 	private Set<UUID> followed(Collection<UUID> authorIds, UUID viewerId) {
 		List<?> rows = entityManager
 				.createNativeQuery("select followee_id from follows where follower_id = :viewer and followee_id in (:ids)")
-				.setParameter("viewer", viewerId)
-				.setParameter("ids", authorIds)
+				.setParameter("viewer", UuidColumns.text(viewerId))
+				.setParameter("ids", UuidColumns.texts(authorIds))
 				.getResultList();
-		Set<UUID> followed = new HashSet<>();
-		for (Object row : rows) {
-			followed.add((UUID) row);
-		}
-		return followed;
+		return new HashSet<>(UuidColumns.readAll(rows));
 	}
 }

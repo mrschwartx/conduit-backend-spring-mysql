@@ -1,6 +1,7 @@
 package com.conduit.backend.comments.infrastructure;
 
 import com.conduit.backend.comments.domain.ArticleLookup;
+import com.conduit.backend.shared.infrastructure.persistence.UuidColumns;
 import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +22,6 @@ public class JpaArticleLookup implements ArticleLookup {
 		List<?> rows = entityManager.createNativeQuery("select id from articles where slug = :slug")
 				.setParameter("slug", slug)
 				.getResultList();
-		return rows.stream().findFirst().map(UUID.class::cast);
+		return rows.stream().findFirst().map(UuidColumns::read);
 	}
 }

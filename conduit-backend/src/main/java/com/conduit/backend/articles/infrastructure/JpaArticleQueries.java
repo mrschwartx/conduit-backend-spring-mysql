@@ -7,6 +7,7 @@ import com.conduit.backend.articles.domain.ArticleViewPage;
 import com.conduit.backend.shared.domain.PageWindow;
 import com.conduit.backend.shared.domain.Profile;
 import com.conduit.backend.shared.infrastructure.persistence.AuthorProfiles;
+import com.conduit.backend.shared.infrastructure.persistence.UuidColumns;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import java.util.ArrayList;
@@ -46,8 +47,7 @@ public class JpaArticleQueries implements ArticleQueries {
 		if (rows.isEmpty()) {
 			return Optional.empty();
 		}
-		List<ArticleView> views = hydrate(List.of((UUID) rows.get(0)), viewerId);
-		return views.stream().findFirst();
+		return hydrate(List.of(UuidColumns.read(rows.get(0))), viewerId).stream().findFirst();
 	}
 
 	@Override
@@ -76,7 +76,7 @@ public class JpaArticleQueries implements ArticleQueries {
 	public ArticleViewPage feed(UUID viewerId, PageWindow window) {
 		String where = " from articles a where a.author_id in"
 				+ " (select fl.followee_id from follows fl where fl.follower_id = :viewer)";
-		return page(where, Map.of("viewer", viewerId), window, viewerId);
+		return page(where, Map.of("viewer", UuidColumns.text(viewerId)), window, viewerId);
 	}
 
 	@Override
@@ -98,10 +98,7 @@ public class JpaArticleQueries implements ArticleQueries {
 		parameters.forEach(idQuery::setParameter);
 		idQuery.setFirstResult(window.offset());
 		idQuery.setMaxResults(window.limit());
-		List<UUID> ids = new ArrayList<>();
-		for (Object row : idQuery.getResultList()) {
-			ids.add((UUID) row);
-		}
+		List<UUID> ids = UuidColumns.readAll(idQuery.getResultList());
 		return new ArticleViewPage(hydrate(ids, viewerId), total);
 	}
 
@@ -140,13 +137,13 @@ public class JpaArticleQueries implements ArticleQueries {
 
 	private Map<UUID, List<String>> tagsByArticle(List<UUID> ids) {
 		List<?> rows = entityManager
-				.createNativeQuery("select article_id, tag from article_tags where article_id in (:ids) order by position")
-				.setParameter("ids", ids)
+				.createNativeQuery("select article_id, tag from article_tags where article_id in (:ids) order by `position`")
+				.setParameter("ids", UuidColumns.texts(ids))
 				.getResultList();
 		Map<UUID, List<String>> tags = new HashMap<>();
 		for (Object row : rows) {
 			Object[] columns = (Object[]) row;
-			tags.computeIfAbsent((UUID) columns[0], key -> new ArrayList<>()).add((String) columns[1]);
+			tags.computeIfAbsent(UuidColumns.read(columns[0]), key -> new ArrayList<>()).add((String) columns[1]);
 		}
 		return tags;
 	}
@@ -155,12 +152,12 @@ public class JpaArticleQueries implements ArticleQueries {
 		List<?> rows = entityManager
 				.createNativeQuery(
 						"select article_id, count(*) from favorites where article_id in (:ids) group by article_id")
-				.setParameter("ids", ids)
+				.setParameter("ids", UuidColumns.texts(ids))
 				.getResultList();
 		Map<UUID, Long> counts = new HashMap<>();
 		for (Object row : rows) {
 			Object[] columns = (Object[]) row;
-			counts.put((UUID) columns[0], ((Number) columns[1]).longValue());
+			counts.put(UuidColumns.read(columns[0]), ((Number) columns[1]).longValue());
 		}
 		return counts;
 	}
@@ -168,13 +165,9 @@ public class JpaArticleQueries implements ArticleQueries {
 	private Set<UUID> favoritedBy(List<UUID> ids, UUID viewerId) {
 		List<?> rows = entityManager
 				.createNativeQuery("select article_id from favorites where user_id = :viewer and article_id in (:ids)")
-				.setParameter("viewer", viewerId)
-				.setParameter("ids", ids)
+				.setParameter("viewer", UuidColumns.text(viewerId))
+				.setParameter("ids", UuidColumns.texts(ids))
 				.getResultList();
-		Set<UUID> favorited = new HashSet<>();
-		for (Object row : rows) {
-			favorited.add((UUID) row);
-		}
-		return favorited;
+		return new HashSet<>(UuidColumns.readAll(rows));
 	}
 }

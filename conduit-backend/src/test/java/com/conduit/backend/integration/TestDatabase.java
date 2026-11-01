@@ -13,7 +13,9 @@ final class TestDatabase {
 
 	static final TestDatabase INSTANCE = new TestDatabase();
 
-	private static final String DEFAULT_URL = "postgres://dev_user:dev_pass@localhost:5432/conduit_dev";
+	private static final String JDBC_OPTIONS = "?connectionTimeZone=UTC&allowPublicKeyRetrieval=true";
+
+	private static final String DEFAULT_URL = "mysql://root:root_pass@localhost:3306/mysql";
 
 	final String jdbcUrl;
 
@@ -31,18 +33,18 @@ final class TestDatabase {
 		String[] credentials = (uri.getUserInfo() == null ? "" : uri.getUserInfo()).split(":", 2);
 		this.username = decode(credentials[0]);
 		this.password = credentials.length > 1 ? decode(credentials[1]) : "";
-		int port = uri.getPort() == -1 ? 5432 : uri.getPort();
-		String prefix = "jdbc:postgresql://" + uri.getHost() + ":" + port + "/";
-		this.adminJdbcUrl = prefix + uri.getPath().substring(1);
+		int port = uri.getPort() == -1 ? 3306 : uri.getPort();
+		String prefix = "jdbc:mysql://" + uri.getHost() + ":" + port + "/";
+		this.adminJdbcUrl = prefix + uri.getPath().substring(1) + JDBC_OPTIONS;
 		this.databaseName = "conduit_test_" + UUID.randomUUID().toString().replace("-", "");
-		this.jdbcUrl = prefix + databaseName;
-		execute("CREATE DATABASE " + databaseName);
+		this.jdbcUrl = prefix + databaseName + JDBC_OPTIONS;
+		execute("CREATE DATABASE " + databaseName + " CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
 		Runtime.getRuntime().addShutdownHook(new Thread(this::drop));
 	}
 
 	private void drop() {
 		try {
-			execute("DROP DATABASE IF EXISTS " + databaseName + " WITH (FORCE)");
+			execute("DROP DATABASE IF EXISTS " + databaseName);
 		}
 		catch (RuntimeException ignored) {
 			return;

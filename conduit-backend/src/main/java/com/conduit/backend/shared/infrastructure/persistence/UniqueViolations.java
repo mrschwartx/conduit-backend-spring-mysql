@@ -5,7 +5,7 @@ import java.util.Optional;
 
 public final class UniqueViolations {
 
-	private static final String UNIQUE_VIOLATION_STATE = "23505";
+	private static final int DUPLICATE_ENTRY = 1062;
 
 	private UniqueViolations() {
 	}
@@ -21,7 +21,7 @@ public final class UniqueViolations {
 
 	private static Optional<SQLException> find(Throwable error) {
 		for (Throwable current = error; current != null; current = current.getCause()) {
-			if (current instanceof SQLException sql && UNIQUE_VIOLATION_STATE.equals(sql.getSQLState())) {
+			if (current instanceof SQLException sql && sql.getErrorCode() == DUPLICATE_ENTRY) {
 				return Optional.of(sql);
 			}
 			if (current.getCause() == current) {

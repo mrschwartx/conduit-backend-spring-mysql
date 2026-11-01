@@ -3,6 +3,7 @@ package com.conduit.backend.users.infrastructure;
 import com.conduit.backend.shared.domain.AlreadyExistsException;
 import com.conduit.backend.shared.domain.EntityIds;
 import com.conduit.backend.shared.infrastructure.persistence.UniqueViolations;
+import com.conduit.backend.shared.infrastructure.persistence.UuidColumns;
 import com.conduit.backend.users.domain.User;
 import com.conduit.backend.users.domain.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -13,8 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class JpaUserRepository implements UserRepository {
-
-	private static final UUID NO_EXCLUSION = new UUID(0L, 0L);
 
 	private final UserJpaRepository jpaRepository;
 
@@ -76,12 +75,12 @@ public class JpaUserRepository implements UserRepository {
 
 	@Override
 	public boolean existsByEmail(String email, UUID excludeId) {
-		return jpaRepository.countByEmailExcluding(email, excludeId != null ? excludeId : NO_EXCLUSION) > 0;
+		return jpaRepository.countByEmailExcluding(email, excludeId != null ? excludeId : UuidColumns.NIL) > 0;
 	}
 
 	@Override
 	public boolean existsByUsername(String username, UUID excludeId) {
-		return jpaRepository.countByUsernameExcluding(username, excludeId != null ? excludeId : NO_EXCLUSION) > 0;
+		return jpaRepository.countByUsernameExcluding(username, excludeId != null ? excludeId : UuidColumns.NIL) > 0;
 	}
 
 	private static RuntimeException translate(RuntimeException error) {

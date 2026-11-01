@@ -6,6 +6,7 @@ COMPOSE_DEV = docker compose -f docker-compose.dev.yml
 docker/env:
 	@test -f .env || { \
 		sed -e "s|^DB_PASSWORD=.*|DB_PASSWORD=$$(openssl rand -hex 16)|" \
+			-e "s|^DB_ROOT_PASSWORD=.*|DB_ROOT_PASSWORD=$$(openssl rand -hex 16)|" \
 			-e "s|^AUTH_SECRET=.*|AUTH_SECRET=$$(openssl rand -hex 32)|" \
 			.env.example > .env && echo "Created .env with generated secrets"; \
 	}

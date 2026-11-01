@@ -10,6 +10,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "comments")
@@ -20,10 +22,12 @@ public class CommentEntity {
 	@Column(name = "id", nullable = false, updatable = false)
 	private Long id;
 
-	@Column(name = "article_id", nullable = false, updatable = false)
+	@JdbcTypeCode(SqlTypes.CHAR)
+	@Column(name = "article_id", nullable = false, updatable = false, length = 36)
 	private UUID articleId;
 
-	@Column(name = "author_id", nullable = false, updatable = false)
+	@JdbcTypeCode(SqlTypes.CHAR)
+	@Column(name = "author_id", nullable = false, updatable = false, length = 36)
 	private UUID authorId;
 
 	@Column(name = "body", nullable = false)

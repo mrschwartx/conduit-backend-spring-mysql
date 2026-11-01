@@ -1,6 +1,7 @@
 package com.conduit.backend.users.infrastructure;
 
 import com.conduit.backend.users.domain.FollowRepository;
+import com.conduit.backend.shared.infrastructure.persistence.UuidColumns;
 import jakarta.persistence.EntityManager;
 import java.util.UUID;
 import org.springframework.stereotype.Repository;
@@ -19,9 +20,10 @@ public class JpaFollowRepository implements FollowRepository {
 	@Transactional
 	public void follow(UUID followerId, UUID followeeId) {
 		entityManager.createNativeQuery(
-				"insert into follows (follower_id, followee_id) values (:follower, :followee) on conflict do nothing")
-				.setParameter("follower", followerId)
-				.setParameter("followee", followeeId)
+				"insert into follows (follower_id, followee_id) values (:follower, :followee)"
+						+ " on duplicate key update follower_id = follower_id")
+				.setParameter("follower", UuidColumns.text(followerId))
+				.setParameter("followee", UuidColumns.text(followeeId))
 				.executeUpdate();
 	}
 
@@ -30,8 +32,8 @@ public class JpaFollowRepository implements FollowRepository {
 	public void unfollow(UUID followerId, UUID followeeId) {
 		entityManager.createNativeQuery(
 				"delete from follows where follower_id = :follower and followee_id = :followee")
-				.setParameter("follower", followerId)
-				.setParameter("followee", followeeId)
+				.setParameter("follower", UuidColumns.text(followerId))
+				.setParameter("followee", UuidColumns.text(followeeId))
 				.executeUpdate();
 	}
 
@@ -39,8 +41,8 @@ public class JpaFollowRepository implements FollowRepository {
 	public boolean isFollowing(UUID followerId, UUID followeeId) {
 		Number count = (Number) entityManager.createNativeQuery(
 				"select count(*) from follows where follower_id = :follower and followee_id = :followee")
-				.setParameter("follower", followerId)
-				.setParameter("followee", followeeId)
+				.setParameter("follower", UuidColumns.text(followerId))
+				.setParameter("followee", UuidColumns.text(followeeId))
 				.getSingleResult();
 		return count.longValue() > 0;
 	}

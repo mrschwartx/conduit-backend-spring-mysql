@@ -1,6 +1,7 @@
 package com.conduit.backend.articles.infrastructure;
 
 import com.conduit.backend.articles.domain.FavoriteRepository;
+import com.conduit.backend.shared.infrastructure.persistence.UuidColumns;
 import jakarta.persistence.EntityManager;
 import java.util.UUID;
 import org.springframework.stereotype.Repository;
@@ -19,9 +20,10 @@ public class JpaFavoriteRepository implements FavoriteRepository {
 	@Transactional
 	public void favorite(UUID userId, UUID articleId) {
 		entityManager.createNativeQuery(
-				"insert into favorites (user_id, article_id) values (:user, :article) on conflict do nothing")
-				.setParameter("user", userId)
-				.setParameter("article", articleId)
+				"insert into favorites (user_id, article_id) values (:user, :article)"
+						+ " on duplicate key update user_id = user_id")
+				.setParameter("user", UuidColumns.text(userId))
+				.setParameter("article", UuidColumns.text(articleId))
 				.executeUpdate();
 	}
 
@@ -29,8 +31,8 @@ public class JpaFavoriteRepository implements FavoriteRepository {
 	@Transactional
 	public void unfavorite(UUID userId, UUID articleId) {
 		entityManager.createNativeQuery("delete from favorites where user_id = :user and article_id = :article")
-				.setParameter("user", userId)
-				.setParameter("article", articleId)
+				.setParameter("user", UuidColumns.text(userId))
+				.setParameter("article", UuidColumns.text(articleId))
 				.executeUpdate();
 	}
 }

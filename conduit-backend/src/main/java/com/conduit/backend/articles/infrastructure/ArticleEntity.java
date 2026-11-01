@@ -13,16 +13,20 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "articles")
 public class ArticleEntity {
 
 	@Id
-	@Column(name = "id", nullable = false, updatable = false)
+	@JdbcTypeCode(SqlTypes.CHAR)
+	@Column(name = "id", nullable = false, updatable = false, length = 36)
 	private UUID id;
 
-	@Column(name = "author_id", nullable = false, updatable = false)
+	@JdbcTypeCode(SqlTypes.CHAR)
+	@Column(name = "author_id", nullable = false, updatable = false, length = 36)
 	private UUID authorId;
 
 	@Column(name = "slug", nullable = false, length = 255)
